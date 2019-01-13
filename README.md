@@ -1,2 +1,2 @@
 # branch_ml
-machine  learning
+An example of machine learning algorithm developed as part of specific project undertaken at work
