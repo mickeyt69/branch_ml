@@ -1,35 +1,14 @@
 ---
 title: "Branch ML"
-output: html_document
+output: rmarkdown::github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,message=FALSE,cache=TRUE)
 ```
+The data used in this model is the exact same as what has been used in the actual model. I have just anonymised the preditor variables and target variable. The target variable is simply a 1 (where monthly score exceeds threshold) and 0 when the score doesn't exceed the threshold.
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-
-The data used in this model is the exact same as what has been used in the actual model. I have just anonymised the preditor variables and target variable.
-
-```{r}
+```{r results='asis'}
 
 library(plyr)
 library(caret)
@@ -44,16 +23,24 @@ library(MASS)
 library(ROCR)
 library(corrr)
 library(tidyquant)
-
-#read data into R, mutatae target variable as factor
-data<-data_18122018v3_anon%>%dplyr::mutate(target_var=as.factor(target_var))
-summary(data)
 ```
-There are no N/As in the data, so we're right to go.
 
-Lets check the correlations and importance of variables.
+
+```{r results='asis'}
+#read data into R, mutate target variable as factor
+data_18122018v3_anon<-read_csv("C:/Users/Michael/Desktop/data_18122018v3_anon.csv")
+data<-data_18122018v3_anon%>%dplyr::mutate(target_var=as.factor(target_var))
+```
 
 ```{r}
+summary(data)
+```
+           
+
+There are no N/As in the data, so we're right to go.
+Lets check the correlations and importance of variables.
+
+```{r }
 # prepare training scheme
 control <- trainControl(method="repeatedcv", number=10, repeats=10)
 # train the model
@@ -65,9 +52,11 @@ print(importance)
 # plot importance
 plot(importance)
 ```
+
+
 The model suggests that var7, var9, var12 and var13 are important variables to be considered when building the final model 
 
-```{r}
+```{r }
 corrr_analysis <- data %>% mutate(target_var=as.numeric(target_var))%>%
   correlate() %>%
   focus(target_var) %>%
@@ -106,84 +95,8 @@ corrr_analysis %>%
 
 ```
 
-corrr_analysis <- data %>% mutate(greater4=as.numeric(greater4))%>%
-  correlate() %>%
-  focus(greater4) %>%
-  #rename(feature == rowname) %>%
-  arrange(abs(greater4)) %>%
-  mutate(feature = as_factor(rowname)) 
-corrr_analysis
-
-corrr_analysis %>%
-  ggplot(aes(x = greater4, y = fct_reorder(feature, desc(greater4)))) +
-  geom_point() +
-  # Positive Correlations - Contribute to risk
-  geom_segment(aes(xend = 0, yend = feature), 
-               color = palette_light()[[3]], 
-               data = corrr_analysis %>% filter(greater4 >0)) +
-  geom_point(color = palette_light()[[3]], 
-             data = corrr_analysis %>% filter(greater4 >0 )) +
-  
-  # Negative Correlations - Prevent risk
-    geom_segment(aes(xend = 0, yend = feature), 
-                 color = palette_light()[[2]], 
-                 data = corrr_analysis %>% filter(greater4 <0 )) +
-    geom_point(color = palette_light()[[2]], 
-               data = corrr_analysis %>% filter(greater4 <0 )) +
-# Vertical lines
-  geom_vline(xintercept = 0, color = palette_light()[[4]], size = 1, linetype = 2) +
-  geom_vline(xintercept = -0.25, color = palette_light()[[4]], size = 1, linetype = 2) +
-  geom_vline(xintercept = 0.25, color = palette_light()[[4]], size = 1, linetype = 2) +
-  # Aesthetics
-  theme_tq() +
-  labs(title = "Branch Risk Indicator Correlation Analysis",
-       subtitle = paste("Positive Correlations (contribute to risk),",
-                        "Negative Correlations (reduce risk)"),
-       y = "Feature Importance",
-       x= "Target")
-
-
-##paired scatter plot
-## density plot
-
-featurePlot(x = data[, 1:9], 
-            y = data$greater4,
-            plot = "density", 
-            ## Pass in options to xyplot() to 
-            ## make it prettier
-            scales = list(x = list(relation="free"), 
-                          y = list(relation="free")), 
-            adjust = 1.5, 
-            pch = "|", 
-            layout = c(3,3), 
-            auto.key = list(columns = 2))
-## box plot
-
-featurePlot(x = df[, 1:9], 
-            y = df$greater3, 
-            plot = "box", 
-            ## Pass in options to bwplot() 
-            scales = list(y = list(relation="free"),
-                          x = list(rot = 90)),  
-            layout = c(3,3 ), 
-            auto.key = list(columns = 2))
-
-
-featurePlot(x = df[, 1:9], 
-            y = df$greater3, 
-            plot = "scatter", 
-            layout = c(4, 1))
-
-# find high correlations
-
-df1<-data%>%dplyr::select(-greater4)
-cor_df<-cor(df1)
-corrplot(df1)
-corrplot(cor_df)
-
-highCor<-findCorrelation(cor_df, cutoff = 0.8, exact=FALSE,verbose = TRUE)
-names(df1)[highCor]
-corrplot(cor_df)
+Checking for linear combiantions and highlight variables with near zero variance
+```{r }
 
 #find linear combinations
 findLinearCombos(data)
@@ -192,352 +105,62 @@ findLinearCombos(data)
 
 nearZeroVar(data,names=TRUE,saveMetrics = TRUE)
 
-findCorrelation(data)
+
+```
 
 
 
-###### use Caret to train/fit GLM model##### predictor as factor
+Now I'll use the Caret package to train/fit GLM model predictor as factor
 
+First I'll set the control parameters, then split the data into a training and test set. Because I am also looking at performing 10-fold cross validation on the data, I won't set aside a validation set.
 
+```{r }
 control <- trainControl(method="repeatedcv", number=10, repeats=10)
 
-Train <- createDataPartition(data$greater4, p=0.7, list=FALSE)
+Train <- createDataPartition(data$target_var, p=0.7, list=FALSE)
 training <- data[ Train, ]
 testing <- data [ -Train, ]
+```
 
-
-
-##RFE-can take a long long long time to run
-
-ctrl <- rfeControl(functions = rfFuncs,
-                     method = "repeatedcv",
-                     repeats = 3,
-                     verbose = TRUE)
-results<-rfe(x, y,sizes=c(1:15),rfeControl = ctrl,metric='Accuracy')
-
-branch_pred_profile <- rfe(training[,2:16], training[[1]],sizes=c(1:15),
-                         rfeControl = ctrl)
-branch_pred_profile
-
-predictors(branch_pred_profile)
-
-plot(branch_pred_profile,tyoe=c("g","o"))
-
-
-
+```{r eval=FALSE}
 ##this finds the best combination of variables for logit##
-mod_fit<-train(greater4~.,
+mod_fit<-train(target_var~.,
                data=training, method="glmStepAIC", family="binomial",trControl = control)
 
 mod_fit$results
 mod_fit$finalModel
 summary(mod_fit$finalModel)
+```
 
+While the model fit suggests an equation with quite a high accuracy, in practice the list of actual variables makes it very difficult for the goals of this project to be met i.e. develop an algorithm that can be used on a daily basis using variables I can extract easily, without relying on another department to deliver the data. 
+Based on the above criteria, I chose to two specific variables that I knew could be obtained and loaded into the Qliksense app daily. Each month I run the whole algorithm again with all the variables to ensure that my manual selection is still valid.
+
+```{r warning=FALSE}
 
 #select variables manually
 
-mod_fit_one<-train(greater4~var8+var9,
+mod_fit_one<-train(target_var~var8+var9,
                    data=training, method="glm", family="binomial",trControl = control)
-
-summary(mod_fit_one)
-
-pred <- predict.train(mod_fit_one, newdata=testing)
-pred1<-predict.train(mod_fit_one, newdata=testing,type="prob")
-
-
-results<-table(pred, testing$greater4)
-sum(diag(results))/sum(results)
-imp<-varImp(mod_fit_one)
-plot(imp)
-
-
-
-
-
-
-
-######Using base glm•
-# split the data into training and testing datasets 
-
-data<-data%>%mutate(greater4=as.factor(greater4))
-Train <- createDataPartition(data$greater4, p=0.6, list=FALSE)
-training <- data[ Train, ]
-testing <- data [ -Train, ]
-
-# use glm to train the model on the training dataset. make sure to set family to "binomial"
-model_full <- glm(greater4~disc+redraw+miss_files+total_dep+br_apps+total_wdl+comp+td_early+train+ore+ooh,data=training, family="binomial")
-
-Train <- createDataPartition(data$greater4, p=0.7, list=FALSE)
-training <- data[ Train, ]
-testing <- data [ -Train, ]
-
-###Goodness of fit test
-model_one <- glm(greater4~disc, data=training, family="binomial")
-model_two <-glm(greater4~disc+redraw, data=training, family="binomial")
-model_three <- glm(greater4~disc+redraw+`Missing files`, data=training, family="binomial")
-model_four <- glm(greater4~disc+redraw+`Missing files`+comp, data=training, family="binomial")
-model_five <- glm(greater4~disc+redraw+`Missing files`+comp+td_early, data=training, family="binomial")
-model_six <- glm(greater4~disc+redraw+`Missing files`+comp+td_early+train, data=training, family="binomial")
-model_seven <- glm(greater4~disc+redraw+`Missing files`+comp+td_early+train+ore, data=training, family="binomial")
-model_eight <- glm(greater4~disc+redraw+`Missing files`+comp+td_early+train+ore+ooh, data=training, family="binomial")
-
-lrtest(model_one,model_two)
-#,model_three,model_four,model_five,model_six,model_seven, model_eight)
-
-
-summary(model_three)
-
-pred <- predict(model_three, newdata=testing)
-
-results<-table(pred, testing$greater4)
-sum(diag(results))/sum(results)
-
-
-
-
-
-
-#other variable combinations 
-
-mod_fit_two<-train(greater4~disc+redraw+td_early+botl_overdue+botl_sameday,
-                   data=training, method="glm", family="binomial",trControl = control)
-mod_fit_three<-train(greater4~disc+redraw+unsatis,
-                     data=training, method="glm", family="binomial",trControl = control)
-mod_fit_four<-train(greater4~disc+redraw+unsatis+`Missing files`+comp,
-                    data=training, method="glm", family="binomial",trControl = control)
-mod_fit_five<-train(greater4~disc+redraw+`Missing files`+comp+td_early+unsatis,
-                    data=training, method="glm", family="binomial",trControl = control)
-mod_fit_six<-train(greater4~disc+redraw+`Missing files`+comp+td_early+train+unsatis,
-                   data=training, method="glm", family="binomial",trControl = control)
-mod_fit_seven<-train(greater4~disc+redraw+`Missing files`+comp+td_early+train+ore+unsatis,
-                     data=training, method="glm", family="binomial",trControl = control)
-mod_fit_eight<-train(greater4~disc+redraw+`Missing files`+comp+td_early+train+ore+ooh+unsatis,
-                     data=training, method="glm", family="binomial",trControl = control)
-
-
-
-###Goodness of fit test
-model_one <- glm(greater4~redraw+td_early, data=training, family="binomial")
-model_two <-glm(greater4~disc+redraw+td_early, data=training, family="binomial")
-model_three <- glm(greater4~disc+redraw+unsatis+miss_files, data=training, family="binomial")
-model_four <- glm(greater4~disc+redraw+miss_files+comp+unsatis, data=training, family="binomial")
-model_five <- glm(greater4~disc+redraw+miss_files+comp+td_early+unsatis, data=training, family="binomial")
-model_six <- glm(greater4~disc+redraw+miss_files+comp+td_early+train+unsatis, data=training, family="binomial")
-model_seven <- glm(greater4~disc+redraw+miss_files+comp+td_early+train+ore+unsatis, data=training, family="binomial")
-model_eight <- glm(greater4~disc+redraw+miss_files+comp+td_early+train+ore+ooh+unsatis, data=training, family="binomial")
-
-lrtest(model_full,model_one)
-
-# pseudo r2 look for 'McFadden'- the closer to 1 the better
-pR2(model_one) 
-#other test of significance
-
-
-HLgof.test(fit = fitted(model_one), obs = training$greater4)
-
-regTermTest(model_three, "disc")
-
-#Tests of Individual Predictors: Variable Importance The idea is to test the hypothesis that the 
-#coefficient of an independent variable in the model is not significantly different from zero. 
-#If the test fails to reject the null hypothesis, this suggests that removing the variable from 
-#the model will not substantially harm the fit of that model.
-
-mod_fit <- train(greater3 ~disc+missing, data=training, method="glm", family="binomial")
-
-varImp(mod_fit)
-
-
-#Validation of Predicted Values: Classification Rate
-pred <-predict.train(mod_fit_three, newdata=testing)
-accuracy <- table(pred, testing$greater4)
-accuracy
-
-sum(diag(accuracy))/sum(accuracy)
-
-
-f1 = roc(Class ~ CreditHistory.Critical, data=training)
-plot(f1, col="red")
-
-library(ROCR)
-# Compute AUC for predicting Class with the model
-prob <- predict(model_one, newdata=testing, type="response")
-pred <- prediction(prob, testing$greater4)
-perf <- performance(pred, measure = "tpr", x.measure = "fpr")
-plot(perf)
-
-
-auc <- performance(pred, measure = "auc")
-auc <- auc@y.values[[1]]
-auc
-
-
-
-
-
-
-###Select best model
-##SVM
-
-SVModel <- train(greater4 ~ ., data = training,
-                 method = "svmPoly",
-                 trControl= control,
-                 tuneGrid = data.frame(degree = 1,
-                                       scale = 1,
-                                       C = 1),
-                 preProcess = c("pca","scale","center"),
-                 na.action = na.omit
-)
-
-
-SVMPredictions <-predict(SVModel, testing)
-# Create confusion matrix
-cmSVM <-confusionMatrix(SVMPredictions, testing$greater4)
-print(cmSVM)
-
-importance <- varImp(SVModel, scale=FALSE)
-plot(importance)
-
-##Decision tree
-
-DecTreeModel <- train(greater4 ~ ., data = training, 
-                      method = "C5.0",
-                      preProcess=c("scale","center"),
-                      trControl= control,
-                      na.action = na.omit
-)
-
-#Predictions
-DTPredictions <-predict(DecTreeModel, testData, na.action = na.pass)
-# Print confusion matrix and results
-cmTree <-confusionMatrix(DTPredictions, testData$Class)
-print(cmTree)
-
-##Naive Bayes
-
-NaiveModel <- train(training[,-1], training$greater4, 
-                    method = "nb",
-                    preProcess=c("scale","center"),
-                    trControl= control,
-                    na.action = na.omit
-)
-
-#Predictions
-NaivePredictions <-predict(NaiveModel, testData, na.action = na.pass)
-cmNaive <-confusionMatrix(NaivePredictions, testData$Class)
-
-
-results <- resamples(list(LVQ=modelLvq, GBM=modelGbm, SVM=modelSvm, Logit=modelLogit))
-# summarize the distributions
-
-
-
-
-
-
-##ROC
-
-
-ROCRpred <- ROCR::prediction(pred1,testing$greater4)
-ROCRperf <- performance(ROCRpred, 'tpr','fpr')
-plot(ROCRperf, colorize = TRUE, text.adj = c(-0.2,1.7))
-
-ROCRperf2 <- performance(ROCRpred, 'sens','spec')
-
-
-fitted <- plogis(predict.train(mod_fit_three,testing))
-
-
-optCutOff <- optimalCutoff(testing$greater4, fitted)[1] 
-
-
-#misClassError(testing$greater4, fitted, threshold = optCutOff)
-
-plotROC(testing$greater4, pred1)
-
-
-######Cross validation
-
-train_control<- trainControl(method="repeatedcv", number=10,repeats = 3)
-
-model<- train(greater3~disc+train, data=df, trControl=train_control, method="glm", family=binomial())
-
-summary(model)
-model$results
-print(model)
-
-
-
-#######Naive bayes
-
-library(e1071)
-library(factoextra)
-
-
-pca_data <- data%>%
-  dplyr::select(-greater4)
-  
-pca_data<-prcomp(pca_data, scale = TRUE)
-
-
-fviz_eig(pca_data,addlabels=TRUE)
-
-
-fviz_pca_var(pca_data, col.var = "black")
-
-
-fviz_pca_var(pca_data, col.var="contrib",
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             repel = TRUE # Avoid text overlapping
-)
-
-fviz_contrib(pca_data, choice = "var", axes = 1, top = 10)
-fviz_contrib(pca_data, choice = "var", axes = 2, top = 10)
-fviz_contrib(pca_data, choice = "var", axes = 3, top = 10)
-
-
-pca_data <- data%>%
-  dplyr::select(-greater4)
-
-scale_data<-scale(pca_data)
-
-fviz_nbclust(scale_data, kmeans, method = "gap_stat")
-
-res.dist <- get_dist(pca_data, stand = TRUE, method = "pearson")
-
-
-stdev_data <- summary(pca_data)$importance[2,]
-print(stdev_data)
-
-pca_data$rotation
-
-biplot(pca_data,scale=0)
-
-n_col <- which(stdev_data >= .04)
-data2 <- data[, n_col]
-
-index = sample(nrow(data), floor(nrow(data) * 0.7)) #70/30 split.
-train = data[index,]
-test = data[-index,]
-testx<-test%>%select(disc,missing,greater3)
-trainx<-train%>%select(disc,missing,greater3)
-xTrain = train[,-10] # removing y-outcome variable.
-yTrain = train$greater3 # only y.
-
-
-xTest = test[,-10]
-yTest = test$greater3
-
-model <- naiveBayes(greater3~., data = trainx)
-model
-summary(model)
-print(model)
-str(model)
-
-preds <-predict(model,testx,type ='class')
-table(preds,testx[,-3])
-conf_matrix <- table(preds, yTest)
-
-preds
 
 ```
 
+The results of the equation are below
+
+```{r }
+summary(mod_fit_one)
+
+pred <- predict.train(mod_fit_one, newdata=testing)
+
+results<-table(pred, testing$target_var)
+
+results
+
+sum(diag(results))/sum(results)
+
+```
+
+The model is reasonably accurate, with a higher proportion of false positives than false negatives. For the purposes of this model, that is acceptable.
+
+#Conclusion
+
+While this model is not the best performing (Naive Bayes and Neural Net models performed better) and is not even the suggested equation from Caret, it achieves exactly what I was trying to achieve.
